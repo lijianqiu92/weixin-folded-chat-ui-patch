@@ -53,7 +53,8 @@ try {
  Copy-Item -LiteralPath $source -Destination $stage -Force
  if ((Hash $stage) -ne $desiredHash) { throw 'Staged file verification failed.' }
  # Replacement is on the same volume. The independently verified original is preserved in this folder.
- [System.IO.File]::Replace($stage,$target,$null)
+ # Windows PowerShell 5.1 converts $null string arguments to an empty string.
+ [System.IO.File]::Replace($stage,$target,[NullString]::Value)
  if ((Hash $target) -ne $desiredHash) { throw 'Installed file verification failed. Use Restore-Original.cmd.' }
  Write-Host ($Mode+' completed. You can now reopen Weixin.')
  Write-Host 'No startup task, service, registry entry, account data, or chat database was changed.'
@@ -64,3 +65,4 @@ try {
  Read-Host 'Press Enter to close'
  exit 1
 }
+
