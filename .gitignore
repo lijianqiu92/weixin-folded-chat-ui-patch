@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+work/
+*.dll
+*.exe
+*.bin
+*.dmp
+*.log
+*.png
+*.jpg
+*.sqlite*
+*.db
+*runtime-state*.json
+.env
+.env.*

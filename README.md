@@ -1,2 +1,76 @@
-# weixin-folded-chat-ui-patch
-Experimental, reversible UI patch for Windows Weixin 4.2.0.13: hide folded-chat preview and unread dot, with centered title. Source only; no Weixin binaries.
+# 微信「折叠的聊天」入口显示补丁
+
+Windows 微信 **4.2.0.13 x64** 的实验性、可逆 UI 补丁：隐藏“折叠的聊天”入口的最新消息预览和未读红点，并将标题上下居中。入口、图标、点击处理、聊天内容和真实未读状态保持原逻辑。
+
+**当前状态：预览版。** 单机运行中的内存版已由用户确认三项显示效果；收到新消息后的行为、完整入口操作、固定版重启仍待验证。请勿把当前结果理解为所有环境均已验证。
+
+本仓库只提供补丁源码、构建器和恢复工具，**不分发微信 DLL、修改后的微信程序、聊天记录或账户数据**。固定版由用户自己的精确版本 DLL 在本机生成。
+
+## 兼容条件
+
+- Windows x64、64 位 Python 3.10 或以上。
+- 微信 4.2.0.13；原始 `Weixin.dll` 的 SHA-256 必须严格等于：
+
+```text
+afe3d02c58bada3c35009c0cd58ee1f57b2a00fe53237d0dce649107fddb9a20
+```
+
+即使版本号相同，只要哈希不同也拒绝运行。其他版本的地址和布局可能不同，不要跳过校验。
+
+## 先试手动内存版
+
+在已经运行的微信中启用，不需要退出、重登或改安装文件：
+
+```powershell
+python runtime_patch.py enable
+python runtime_patch.py status
+python runtime_patch.py disable
+```
+
+也可以双击 `Enable.cmd`、`Status.cmd`、`Disable.cmd`。该模式只使用 Python 标准库。默认选择唯一的微信主进程；存在多个主进程时可指定 `--pid`。
+
+关闭过滤后需让该行重绘，Qt 布局才会恢复。关闭过滤不是卸载跳转；完整退出微信后，所有内存补丁才会被清除。再次启动微信需重新启用。临时状态文件留在脚本旁边，已排除 Git 跟踪。
+
+**如果本机聊天记录不会持久保存，请先使用内存版等待新消息测试，不要为了安装固定版贸然退出或重新登录。**
+
+## 构建固定版
+
+构建器只读取原 DLL，在 `dist/fixed-patch/` 生成修改副本、完整原版备份、清单和安装/恢复工具。构建不会修改微信安装目录或运行中的进程。
+
+```powershell
+python -m pip install -r requirements-build.txt
+python build_fixed_patch.py
+```
+
+非默认安装路径可指定：
+
+```powershell
+python build_fixed_patch.py --dll "D:\Apps\Weixin\4.2.0.13\Weixin.dll" --out "dist/fixed-patch"
+```
+
+确认可以退出微信后，按 [固定版安装与恢复说明](docs/fixed-patch.md)操作。默认安装器针对 `C:\Program Files\Tencent\Weixin\4.2.0.13\Weixin.dll`。
+
+固定版直接修改当前版本的程序文件，不添加开机任务、服务或注册表自动注入。安装后正常启动微信即可；重装覆盖该 DLL 后消失，更新换用其他程序文件后也可能失效。
+
+修改 DLL 会失去腾讯原版的有效数字签名。微信若校验原签名或完整性，可能拒绝加载；这时恢复原版，不要关闭系统安全保护。固定版目前尚未完成微信重启验收。
+
+## 验证
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python tests/test_payload.py
+```
+
+测试覆盖目标摘要/角标、禁用、普通聊天、近似标识、非目标子控件、父链/模型缺失、控件复用后的恢复、寄存器和栈恢复，以及 Qt 调用的栈对齐。测试不启动、登录或修改微信，也不需要微信 DLL。
+
+构建器还校验原始指令、PE 校验和、扩展重定位表及不同加载地址下的生成指令。原 DLL 和构建产物均不会上传到 CI。
+
+详见 [实现说明](docs/implementation.md)与[待完成测试](docs/testing.md)。
+
+## 范围与限制
+
+- 仅控制折叠聊天入口；不影响系统托盘、任务栏、通知弹窗等其他提示。
+- 不清空消息、不将聊天标为已读，不修改聊天数据库、登录状态或配置。
+- 不承诺隐藏屏幕阅读器、可访问文本或悬停提示中的内容。
+- 精确绑定一个构建；后续适配必须重新定位并验证。
+- 与腾讯及微信官方无关联。仓库公开源码，暂未指定开源许可证。
