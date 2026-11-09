@@ -6,6 +6,26 @@ Windows 微信 **4.2.0.13 x64** 的实验性、可逆 UI 补丁：隐藏“折�
 
 本仓库只提供补丁源码、构建器和恢复工具，**不分发微信 DLL、修改后的微信程序、聊天记录或账户数据**。固定版由用户自己的精确版本 DLL 在本机生成。
 
+## 直接运行 EXE
+
+在 Releases 下载 `WeixinFoldedChatPatch-0.1.0-preview-Windows-x64.zip`，完整解压到桌面等可写位置，再双击 `WeixinFoldedChatPatch.exe`。不需要 Python。
+
+- 检查状态：读取当前版本和备份状态。
+- 安装固定版：在本机生成补丁和备份，再打开需要管理员权限的安装窗口；不会强制关闭微信。
+- 恢复原版：使用本工具旁 `data/fixed-patch/` 中的原版备份。
+- 手动启用 / 关闭：仅影响本次微信进程。
+
+首次使用固定版时需要设备中有精确匹配的原版 DLL。已经使用旧工具安装补丁的用户，应保留最初的原版备份及恢复工具。EXE 本身不附带微信 DLL，不要单独删除它旁边已经生成的 `data` 文件夹。
+
+自己构建 EXE：
+
+```powershell
+python -m pip install -r requirements-exe.txt
+python build_exe.py
+```
+
+产物为 `dist/portable/WeixinFoldedChatPatch.exe`。
+
 ## 兼容条件
 
 - Windows x64、64 位 Python 3.10 或以上。

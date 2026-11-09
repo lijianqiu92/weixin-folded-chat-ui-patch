@@ -15,3 +15,7 @@ work/
 *runtime-state*.json
 .env
 .env.*
+
+data/
+*.zip
+*.spec

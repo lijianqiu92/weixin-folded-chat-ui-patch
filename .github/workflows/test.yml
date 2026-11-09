@@ -16,3 +16,20 @@ jobs:
       - name: Check installer launched by CMD into Windows PowerShell
         shell: cmd
         run: installer\Install-FixedPatch.cmd -CheckHostOnly < nul
+      - name: Build portable EXE
+        run: |
+          python -m pip install -r requirements-exe.txt
+          python build_exe.py
+      - name: Verify bundled GUI starts without changing Weixin
+        shell: powershell
+        run: |
+          $exe=(Resolve-Path dist/portable/WeixinFoldedChatPatch.exe).Path
+          $report=Join-Path $pwd 'dist/gui-check.json'
+          $p=Start-Process -FilePath $exe -ArgumentList @('--gui-check','--report',('"'+$report+'"')) -WindowStyle Hidden -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw 'EXE GUI check failed' }
+          $result=Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+          if (-not $result.gui_constructed -or $result.action_buttons -ne 5) { throw 'GUI check report mismatch' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Windows-x64-portable-exe
+          path: dist/portable/WeixinFoldedChatPatch.exe
