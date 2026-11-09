@@ -17,3 +17,15 @@
 修改后的 DLL 没有腾讯原版的有效数字签名。程序自身的完整性验证可能拒绝加载。本项目不改变任何系统签名或安全设置。
 
 固定版目前仅完成离线结构、校验和与重定位验证；实际重启测试待完成。请保留原版备份。
+
+## 安装窗口异常
+
+安装和恢复 CMD 会保留窗口并显示退出码；安装器日志在同目录的 `installer-last-run.log`。
+
+只读检查（不申请管理员权限、不退出微信、不写安装目录）：
+
+```powershell
+powershell.exe -NoProfile -File installer/Manage-FixedPatch.ps1 -CheckHostOnly
+```
+
+已构建的目录可运行 `Install-FixedPatch.cmd -CheckOnly` 校验主机和三个 DLL 文件的哈希。

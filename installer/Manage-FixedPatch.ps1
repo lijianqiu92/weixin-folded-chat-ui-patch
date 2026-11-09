@@ -1,15 +1,36 @@
-param([ValidateSet('Install','Restore')][string]$Mode='Install')
+param([ValidateSet('Install','Restore')][string]$Mode='Install', [switch]$CheckOnly, [switch]$CheckHostOnly)
 $ErrorActionPreference='Stop'
 $folder=$PSScriptRoot
 $target='C:\Program Files\Tencent\Weixin\4.2.0.13\Weixin.dll'
 $originalHash='afe3d02c58bada3c35009c0cd58ee1f57b2a00fe53237d0dce649107fddb9a20'
 $patchedHash='095b058a672774b1107595dfcdc1c1e3b3879b8363429d1564d5b975dbca2f24'
-function Hash([string]$path) { return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Hash([string]$path) {
+ $stream=[System.IO.File]::OpenRead($path)
+ $sha=[System.Security.Cryptography.SHA256]::Create()
+ try { return [System.BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-','').ToLowerInvariant() }
+ finally { $sha.Dispose(); $stream.Dispose() }
+}
 try {
+ # CMD may inherit a PowerShell 7 PSModulePath; explicitly load Windows PowerShell's own modules.
+ Import-Module ($PSHOME+'\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
+ Import-Module ($PSHOME+'\Modules\Microsoft.PowerShell.Management\Microsoft.PowerShell.Management.psd1') -ErrorAction Stop
+ if ($CheckHostOnly) { Write-Host 'HOST CHECK PASSED. No files or processes were modified.'; exit 0 }
+ if ($CheckOnly) {
+  Write-Host ('PowerShell '+$PSVersionTable.PSVersion.ToString())
+  if (-not (Test-Path -LiteralPath $target -PathType Leaf)) { throw 'Weixin.dll not found.' }
+  Write-Host ('Installed DLL SHA256: '+(Hash $target))
+  $checkSource=Join-Path $folder 'Weixin.UI-patched.dll'
+  $checkBackup=Join-Path $folder 'Weixin.original.dll'
+  if ((Hash $checkSource) -ne $patchedHash) { throw 'Patch file hash mismatch.' }
+  if ((Hash $checkBackup) -ne $originalHash) { throw 'Original backup hash mismatch.' }
+  Write-Host 'READ-ONLY CHECK PASSED. No program or process was modified.'
+  exit 0
+ }
+ try { Start-Transcript -LiteralPath (Join-Path $folder 'installer-last-run.log') -Force | Out-Null } catch {}
  $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
  $principal=New-Object Security.Principal.WindowsPrincipal($identity)
  if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  $argsList=@('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'),'-Mode',$Mode)
+  $argsList=@('-NoProfile','-File',('"'+$PSCommandPath+'"'),'-Mode',$Mode)
   Start-Process -FilePath 'powershell.exe' -ArgumentList $argsList -Verb RunAs -Wait
   exit
  }
@@ -39,6 +60,7 @@ try {
  Read-Host 'Press Enter to close'
 } catch {
  Write-Host ('ERROR: '+$_.Exception.Message) -ForegroundColor Red
+ if ($CheckOnly -or $CheckHostOnly) { exit 1 }
  Read-Host 'Press Enter to close'
  exit 1
 }
